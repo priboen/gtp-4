@@ -1,17 +1,18 @@
 import {
-  BelongsTo,
-  Column,
-  ForeignKey,
-  HasMany,
-  Model,
   Table,
+  Column,
+  Model,
+  ForeignKey,
+  BelongsTo,
+  HasMany,
 } from 'sequelize-typescript';
 import { User } from './user.model';
 import { Task } from './task.model';
 import { Events } from './events.model';
+import { TeamProject } from './team-project.model';
 
 @Table({ tableName: 'projects' })
-export class Project extends Model {
+export class Project extends Model<Project> {
   @Column
   name: string;
 
@@ -27,4 +28,7 @@ export class Project extends Model {
 
   @HasMany(() => Events)
   events: Events[];
+
+  @HasMany(() => TeamProject)
+  projectUsers: TeamProject[];
 }
