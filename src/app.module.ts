@@ -1,12 +1,35 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, RequestMethod } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UserModule } from './controllers/user/user.module';
 import { MysqlModule } from './common/modules/mysql.module';
+import { ProjectModule } from './controllers/project/project.module';
+import { AuthModule } from './controllers/auth/auth.module';
+import { ProjectAccessMiddleware } from './common/middleware/project-access.middleware';
+import { JwtModule } from '@nestjs/jwt';
 
 @Module({
-  imports: [MysqlModule, UserModule],
+  imports: [
+    MysqlModule,
+    UserModule,
+    ProjectModule,
+    AuthModule,
+    JwtModule.register({
+      secret: process.env.JWT_SECRET,
+      signOptions: { expiresIn: '1h' },
+    }),
+  ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(ProjectAccessMiddleware)
+      .forRoutes(
+        { path: 'projects/:id', method: RequestMethod.ALL },
+        { path: 'tasks/:id', method: RequestMethod.ALL },
+        { path: 'events/:id', method: RequestMethod.ALL },
+      );
+  }
+}
