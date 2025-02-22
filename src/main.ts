@@ -1,3 +1,5 @@
+import * as dotenv from 'dotenv';
+dotenv.config();
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { RequestMethod, ValidationPipe } from '@nestjs/common';
@@ -19,11 +21,11 @@ async function bootstrap() {
     .setTitle('GTP')
     .setDescription('GTP API Documentation')
     .setVersion('1.0')
-    .addTag('users')
+    .addBearerAuth()
     .build();
   const documentFactory = () => SwaggerModule.createDocument(app, config);
   app.use(
-    '/api/documentation',
+    '/docs',
     apiReference({
       spec: {
         content: documentFactory,
