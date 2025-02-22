@@ -5,14 +5,14 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { Request } from 'express';
+import { AuthRequest } from 'src/types/request.interface';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
   constructor(private readonly jwtService: JwtService) {}
 
   canActivate(context: ExecutionContext): boolean {
-    const request: Request = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest<AuthRequest>();
     const authHeader = request.headers.authorization;
 
     if (!authHeader) {
@@ -23,7 +23,7 @@ export class JwtAuthGuard implements CanActivate {
 
     try {
       const decoded = this.jwtService.verify(token);
-      Reflect.set(request, 'user', decoded);
+      request.user = decoded as { userId: number };
       return true;
     } catch (error) {
       throw new UnauthorizedException('Invalid token');
