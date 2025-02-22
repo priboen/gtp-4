@@ -16,7 +16,6 @@ import {
   ApiOperation,
   ApiResponse,
 } from '@nestjs/swagger';
-import { JwtService } from '@nestjs/jwt';
 
 @Controller('auth')
 export class AuthController {
