@@ -7,6 +7,7 @@ import { ProjectModule } from './controllers/project/project.module';
 import { AuthModule } from './controllers/auth/auth.module';
 import { ProjectAccessMiddleware } from './common/middleware/project-access.middleware';
 import { JwtModule } from '@nestjs/jwt';
+import { TaskModule } from './controllers/task/task.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { JwtModule } from '@nestjs/jwt';
       secret: process.env.JWT_SECRET,
       signOptions: { expiresIn: '1h' },
     }),
+    TaskModule,
   ],
   controllers: [AppController],
   providers: [AppService],
