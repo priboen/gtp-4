@@ -8,6 +8,8 @@ import { AuthModule } from './controllers/auth/auth.module';
 import { ProjectAccessMiddleware } from './common/middleware/project-access.middleware';
 import { JwtModule } from '@nestjs/jwt';
 import { TaskModule } from './controllers/task/task.module';
+import { EventsModule } from './controllers/events/events.module';
+import { TeamProjectModule } from './controllers/team-project/team-project.module';
 
 @Module({
   imports: [
@@ -20,6 +22,8 @@ import { TaskModule } from './controllers/task/task.module';
       signOptions: { expiresIn: '1h' },
     }),
     TaskModule,
+    EventsModule,
+    TeamProjectModule,
   ],
   controllers: [AppController],
   providers: [AppService],
