@@ -17,6 +17,6 @@ export class User extends Model {
   @Column
   password: string;
 
-  @HasMany(() => TeamProject)
+  @HasMany(() => TeamProject, { onDelete: 'CASCADE' })
   teamProjects: TeamProject[];
 }

@@ -29,6 +29,6 @@ export class Project extends Model<Project> {
   @HasMany(() => Events)
   events: Events[];
 
-  @HasMany(() => TeamProject)
+  @HasMany(() => TeamProject, { onDelete: 'CASCADE' })
   projectUsers: TeamProject[];
 }

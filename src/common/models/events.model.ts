@@ -22,6 +22,6 @@ export class Events extends Model {
   @Column
   projectId: number;
 
-  @BelongsTo(() => Project)
+  @BelongsTo(() => Project, { onDelete: 'CASCADE' })
   project: Project;
 }
