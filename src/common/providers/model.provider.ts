@@ -1,4 +1,4 @@
-import { Events, Project, Task, User } from '../models';
+import { Events, Project, Task, TeamProject, User } from '../models';
 
 export const userProvider = {
   provide: 'USER_REPOSITORY',
@@ -18,4 +18,9 @@ export const taskProvider = {
 export const eventsProvider = {
   provide: 'EVENTS_REPOSITORY',
   useValue: Events,
+};
+
+export const teamProjectProvider = {
+  provide: 'TEAM_PROJECT_REPOSITORY',
+  useValue: TeamProject,
 };
