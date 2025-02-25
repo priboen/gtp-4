@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty } from 'class-validator';
+import { IsArray, IsNotEmpty, IsNumber, IsOptional } from 'class-validator';
 
 export class CreateProjectDto {
   @ApiProperty({
@@ -15,4 +15,9 @@ export class CreateProjectDto {
   })
   @IsNotEmpty()
   ownerId: number;
+
+  @IsOptional()
+  @IsArray()
+  @IsNumber({}, { each: true })
+  teamMembers?: number[];
 }
