@@ -24,6 +24,8 @@ import { ProjectDetailResponseDto } from './response/project-detail-response.dto
 import { ErrorResponseDto } from './response/error-response.dto';
 import { UnauthorizedResponseDto } from './response/unauthorized-response.dto';
 import { NotFoundResponseDto } from './response/not-found-response.dto';
+import { AuthRequest } from 'src/types/request.interface';
+import { ProjectOwnerMiddleware } from 'src/common/middleware/project-owner.middleware';
 
 @ApiTags('Projects')
 @ApiBearerAuth()
@@ -117,6 +119,7 @@ export class ProjectController {
   }
 
   @Patch(':id')
+  @UseGuards(ProjectOwnerMiddleware)
   @ApiOperation({
     summary: 'Update a project',
     description:
@@ -145,12 +148,16 @@ export class ProjectController {
   update(
     @Param('id') id: number,
     @Body() updateProjectDto: UpdateProjectDto,
-    @Request() req: { user: { userId: number } },
+    @Request() req: AuthRequest,
   ) {
+    if (req.user?.userId === undefined) {
+      throw new Error('User ID is undefined');
+    }
     return this.projectService.update(id, updateProjectDto, req.user.userId);
   }
 
   @Delete(':id')
+  @UseGuards(ProjectOwnerMiddleware)
   @ApiOperation({
     summary: 'Delete a project',
     description: 'Delete a specific project owned by the authenticated user.',
@@ -174,10 +181,10 @@ export class ProjectController {
     description: 'Project not found.',
     type: NotFoundResponseDto,
   })
-  async remove(
-    @Param('id') id: number,
-    @Request() req: { user: { userId: number } },
-  ) {
+  async remove(@Param('id') id: number, @Request() req: AuthRequest) {
+    if (req.user?.userId === undefined) {
+      throw new Error('User ID is undefined');
+    }
     return this.projectService.remove(id, req.user.userId);
   }
 }
