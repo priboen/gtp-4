@@ -9,7 +9,7 @@ import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { CreateTeamProjectDto } from '../team-project/dto/create-team-project.dto';
 import { Sequelize } from 'sequelize-typescript';
-import { Optional } from 'sequelize';
+import { Optional, Op } from 'sequelize';
 import { NullishPropertiesOf } from 'sequelize/types/utils';
 import { ResponseDto } from 'src/common/dto';
 
@@ -21,23 +21,52 @@ export class ProjectService {
     @Inject('TEAM_PROJECT_REPOSITORY')
     private readonly teamProjectModel: typeof TeamProject,
   ) {}
-  async findAll(ownerId: number): Promise<Project[]> {
-    const projects = await this.projectModel.findAll({ where: { ownerId } });
+  async findAll(userId: number): Promise<Project[]> {
+    const projects = await this.projectModel.findAll({
+      include: [
+        {
+          model: TeamProject,
+          as: 'projectUsers',
+          where: { userId },
+          required: false,
+        },
+      ],
+      where: {
+        [Op.or]: [{ ownerId: userId }, { '$projectUsers.userId$': userId }],
+      },
+    });
     if (projects.length === 0) {
-      throw new NotFoundException('Projects not found');
+      throw new NotFoundException('No projects found for this user.');
     }
     return projects;
   }
 
-  async findOne(id: number, ownerId: number): Promise<Project> {
+  async findOne(id: number, userId: number): Promise<Project> {
+    const hasAccess = await this.projectModel.findOne({
+      where: {
+        id,
+        [Op.or]: [{ ownerId: userId }, { '$projectUsers.userId$': userId }],
+      },
+      include: [
+        {
+          model: TeamProject,
+          as: 'projectUsers',
+          required: false,
+        },
+      ],
+    });
+    if (!hasAccess) {
+      throw new NotFoundException('Project Not Found or Access Denied');
+    }
     const project = await this.projectModel.findOne({
-      where: { id, ownerId },
+      where: { id },
       include: [
         { model: Task, as: 'tasks' },
         { model: Events, as: 'events' },
         {
           model: TeamProject,
           as: 'projectUsers',
+          required: false,
           include: [
             {
               model: User,
@@ -47,8 +76,11 @@ export class ProjectService {
           ],
         },
       ],
+      subQuery: false,
     });
-    if (!project) throw new NotFoundException('Project Not Found');
+    if (!project) {
+      throw new NotFoundException('Project Not Found');
+    }
     return project;
   }
 
