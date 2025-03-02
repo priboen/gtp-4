@@ -8,7 +8,13 @@ describe('TaskController', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [TaskController],
-      providers: [TaskService],
+      providers: [
+        TaskService,
+        {
+          provide: 'TASK_REPOSITORY',
+          useValue: {},
+        },
+      ],
     }).compile();
 
     controller = module.get<TaskController>(TaskController);
