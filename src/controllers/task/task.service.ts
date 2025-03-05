@@ -1,8 +1,11 @@
 import {
+  Body,
   ForbiddenException,
   Inject,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
+  Param,
 } from '@nestjs/common';
 import { Project, Task } from 'src/common/models';
 import { CreateTaskDto } from './dto/create-task.dto';
@@ -13,25 +16,41 @@ import { ResponseDto } from 'src/common/dto';
 export class TaskService {
   constructor(
     @Inject('TASK_REPOSITORY') private readonly taskModel: typeof Task,
+    @Inject('PROJECT_REPOSITORY') private readonly projectModel: typeof Project,
   ) {}
-  async findAll(projectId: number): Promise<Task[]> {
+  async findAll(projectId: number): Promise<ResponseDto<Task[]>> {
     const tasks = await this.taskModel.findAll({ where: { projectId } });
     if (!tasks.length) {
       throw new NotFoundException('No tasks found for this project.');
     }
-    return tasks;
+    return new ResponseDto<Task[]>({ data: tasks });
   }
 
-  async findOne(id: number, projectId: number): Promise<Task> {
+  async findOne(id: number, projectId: number): Promise<ResponseDto<Task>> {
     const task = await this.taskModel.findOne({ where: { id, projectId } });
     if (!task) {
       throw new NotFoundException('No task found with the given ID.');
     }
-    return task;
+    return new ResponseDto<Task>({ data: task });
   }
 
-  async create(createTaskDto: CreateTaskDto): Promise<Task> {
-    return this.taskModel.create({ ...createTaskDto });
+  async create(
+    projectId: number,
+    createTaskDto: CreateTaskDto,
+  ): Promise<ResponseDto<Task>> {
+    try {
+      const projectExists = await this.projectModel.findByPk(projectId);
+      if (!projectExists) {
+        throw new NotFoundException(`Project with ID ${projectId} not found`);
+      }
+      const task = await this.taskModel.create({
+        ...createTaskDto,
+        projectId,
+      });
+      return new ResponseDto<Task>({ data: task });
+    } catch (error) {
+      throw new InternalServerErrorException(error.message);
+    }
   }
 
   async update(
@@ -39,8 +58,9 @@ export class TaskService {
     updateTaskDto: UpdateTaskDto,
     projectId: number,
     userId: number,
-  ): Promise<Task> {
-    const task = await this.findOne(id, projectId);
+  ): Promise<ResponseDto<Task>> {
+    const taskResponse = await this.findOne(id, projectId);
+    const task = taskResponse.data;
     const project = await Project.findOne({ where: { id: projectId } });
     if (!project) {
       throw new NotFoundException('Project not found');
@@ -54,12 +74,16 @@ export class TaskService {
       }
     }
     await task.update(updateTaskDto);
-    return task;
+    return new ResponseDto<Task>({ data: task });
   }
 
-  async remove(id: number, projectId: number): Promise<{ message: string }> {
-    const task = await this.findOne(id, projectId);
-    await task.destroy();
-    return { message: 'Task deleted successfully' };
+  async remove(id: number, projectId: number): Promise<ResponseDto> {
+    try {
+      const task = await this.findOne(id, projectId);
+      await task.data.destroy();
+      return new ResponseDto({ message: 'Task deleted successfully' });
+    } catch (error) {
+      throw new InternalServerErrorException(error.message);
+    }
   }
 }
