@@ -41,26 +41,4 @@ export class AuthController {
   login(@Body() loginDto: LoginDto) {
     return this.authService.login(loginDto);
   }
-
-  @Get('profile')
-  @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: 'Get user profile' })
-  @ApiBearerAuth()
-  @ApiResponse({
-    status: 200,
-    description: 'User profile data',
-    schema: {
-      example: {
-        id: 1,
-        name: 'John Doe',
-        username: 'johndoe',
-        email: 'john@example.com',
-        createdAt: '2021-08-01T00:00:00.000Z',
-        updatedAt: '2021-08-01T00:00:00.000Z',
-      },
-    },
-  })
-  profile(@Request() req: { user: { userId: number } }) {
-    return this.authService.getProfile(req.user.userId);
-  }
 }
