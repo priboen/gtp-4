@@ -12,8 +12,4 @@ export class CreateEventsDto {
   @IsNotEmpty()
   @IsDateString()
   date: Date;
-
-  @IsNotEmpty()
-  @IsNumber()
-  projectId: number;
 }
