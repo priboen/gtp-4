@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Inject,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
 import { Events, Project, Task, TeamProject, User } from 'src/common/models';
@@ -21,74 +22,82 @@ export class ProjectService {
     @Inject('TEAM_PROJECT_REPOSITORY')
     private readonly teamProjectModel: typeof TeamProject,
   ) {}
-  async findAll(userId: number): Promise<Project[]> {
-    const projects = await this.projectModel.findAll({
-      include: [
-        {
-          model: TeamProject,
-          as: 'projectUsers',
-          where: { userId },
-          required: false,
+  async findAll(userId: number): Promise<ResponseDto<Project[]>> {
+    try {
+      const projects = await this.projectModel.findAll({
+        include: [
+          {
+            model: TeamProject,
+            as: 'projectUsers',
+            where: { userId },
+            required: false,
+          },
+        ],
+        where: {
+          [Op.or]: [{ ownerId: userId }, { '$projectUsers.userId$': userId }],
         },
-      ],
-      where: {
-        [Op.or]: [{ ownerId: userId }, { '$projectUsers.userId$': userId }],
-      },
-    });
-    if (projects.length === 0) {
-      throw new NotFoundException('No projects found for this user.');
+      });
+      if (projects.length === 0) {
+        throw new NotFoundException('No projects found for this user.');
+      }
+      return new ResponseDto<Project[]>({ data: projects });
+    } catch (error) {
+      throw new InternalServerErrorException(error.message);
     }
-    return projects;
   }
 
-  async findOne(id: number, userId: number): Promise<Project> {
-    const hasAccess = await this.projectModel.findOne({
-      where: {
-        id,
-        [Op.or]: [{ ownerId: userId }, { '$projectUsers.userId$': userId }],
-      },
-      include: [
-        {
-          model: TeamProject,
-          as: 'projectUsers',
-          required: false,
+  async findOne(id: number, userId: number): Promise<ResponseDto<Project>> {
+    try {
+      const hasAccess = await this.projectModel.findOne({
+        where: {
+          id,
+          [Op.or]: [{ ownerId: userId }, { '$projectUsers.userId$': userId }],
         },
-      ],
-    });
-    if (!hasAccess) {
-      throw new NotFoundException('Project Not Found or Access Denied');
+        include: [
+          {
+            model: TeamProject,
+            as: 'projectUsers',
+            required: false,
+          },
+        ],
+      });
+      if (!hasAccess) {
+        throw new NotFoundException('Project Not Found or Access Denied');
+      }
+      const project = await this.projectModel.findOne({
+        where: { id },
+        include: [
+          { model: Task, as: 'tasks' },
+          { model: Events, as: 'events' },
+          {
+            model: TeamProject,
+            as: 'projectUsers',
+            required: false,
+            include: [
+              {
+                model: User,
+                as: 'user',
+                attributes: ['id', 'name', 'email'],
+              },
+            ],
+          },
+        ],
+        subQuery: false,
+      });
+      if (!project) {
+        throw new NotFoundException('Project Not Found');
+      }
+      return new ResponseDto<Project>({ data: project });
+    } catch (error) {
+      throw new InternalServerErrorException(error.message);
     }
-    const project = await this.projectModel.findOne({
-      where: { id },
-      include: [
-        { model: Task, as: 'tasks' },
-        { model: Events, as: 'events' },
-        {
-          model: TeamProject,
-          as: 'projectUsers',
-          required: false,
-          include: [
-            {
-              model: User,
-              as: 'user',
-              attributes: ['id', 'name', 'email'],
-            },
-          ],
-        },
-      ],
-      subQuery: false,
-    });
-    if (!project) {
-      throw new NotFoundException('Project Not Found');
-    }
-    return project;
   }
 
   async create(
     createProjectDto: CreateProjectDto,
     ownerId: number,
     teamProjects?: number[],
-  ): Promise<Project> {
+  ): Promise<ResponseDto<Project>> {
     const transaction = await this.sequelize.transaction();
     try {
       const project = await this.projectModel.create(
@@ -107,12 +116,10 @@ export class ProjectService {
         await this.teamProjectModel.bulkCreate(teamEntries, { transaction });
       }
       await transaction.commit();
-      return project;
+      return new ResponseDto<Project>({ data: project });
     } catch (error) {
       await transaction.rollback();
-      throw new BadRequestException(
-        'Failed to create project and team members',
-      );
+      throw new InternalServerErrorException(error.message);
     }
   }
 
@@ -120,31 +127,67 @@ export class ProjectService {
     id: number,
     updateProjectDto: UpdateProjectDto,
     ownerId: number,
-  ): Promise<Project> {
-    const project = await this.findOne(id, ownerId);
-    await project.update(updateProjectDto);
-    return project;
+  ): Promise<ResponseDto<Project>> {
+    try {
+      const project = await this.findOne(id, ownerId);
+      await project.data.update(updateProjectDto);
+      return new ResponseDto<Project>({ data: project.data });
+    } catch (error) {
+      throw new InternalServerErrorException(error.message);
+    }
   }
 
   async remove(id: number, ownerId: number): Promise<ResponseDto> {
-    const project = await this.findOne(id, ownerId);
-    await project.destroy();
-    return new ResponseDto({
-      message: `Project with ID ${id} has been deleted successfully.`,
-    });
+    try {
+      const project = await this.findOne(id, ownerId);
+      await project.data.destroy();
+      return new ResponseDto({
+        message: `Project with ID ${id} has been deleted successfully.`,
+      });
+    } catch (error) {
+      throw new InternalServerErrorException(error.message);
+    }
   }
 
   async addMember(
     createTeamProjectDto: CreateTeamProjectDto,
-  ): Promise<TeamProject> {
-    return this.teamProjectModel.create(createTeamProjectDto as TeamProject);
+  ): Promise<ResponseDto<TeamProject>> {
+    try {
+      const isMember = await this.teamProjectModel.findOne({
+        where: {
+          projectId: createTeamProjectDto.projectId,
+          userId: createTeamProjectDto.userId,
+        },
+      });
+      if (isMember) {
+        throw new BadRequestException(
+          'User is already a member of this project',
+        );
+      }
+      const member = await this.teamProjectModel.create(
+        createTeamProjectDto as Optional<
+          TeamProject,
+          NullishPropertiesOf<TeamProject>
+        >,
+      );
+      return new ResponseDto<TeamProject>({ data: member });
+    } catch (error) {
+      throw new InternalServerErrorException(error.message);
+    }
   }
 
-  async removeMember(id: number): Promise<void> {
-    const member = await this.teamProjectModel.findByPk(id);
-    if (!member) {
-      throw new NotFoundException('No team member found with the given ID.');
+  async removeMember(id: number): Promise<ResponseDto> {
+    try {
+      const member = await this.teamProjectModel.findByPk(id);
+      if (!member) {
+        throw new NotFoundException('No team member found with the given ID.');
+      }
+      await member.destroy();
+      return new ResponseDto({
+        message: `Team member with ID ${id} has been removed successfully.`,
+      });
+    } catch (error) {
+      throw new InternalServerErrorException(error.message);
     }
-    await member.destroy();
   }
 }
