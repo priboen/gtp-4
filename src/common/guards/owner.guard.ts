@@ -8,7 +8,7 @@ import { Project } from 'src/common/models/project.model';
 import { AuthRequest } from 'src/types/request.interface';
 
 @Injectable()
-export class TaskOwnerGuard implements CanActivate {
+export class OwnerGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest<AuthRequest>();
     const userId = req.user?.userId;
