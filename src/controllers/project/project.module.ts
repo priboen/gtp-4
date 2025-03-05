@@ -5,9 +5,11 @@ import { projectProvider, teamProjectProvider } from 'src/common/providers';
 import { JwtModule } from '@nestjs/jwt';
 import { TeamProjectService } from '../team-project/team-project.service';
 import { MysqlModule } from 'src/common/modules';
+import { UserModule } from '../user/user.module';
 
 @Module({
   imports: [
+    UserModule,
     MysqlModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET,
