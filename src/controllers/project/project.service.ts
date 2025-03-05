@@ -150,12 +150,23 @@ export class ProjectService {
   }
 
   async addMember(
+    projectId: number,
     createTeamProjectDto: CreateTeamProjectDto,
   ): Promise<ResponseDto<TeamProject>> {
     try {
+      const project = await this.projectModel.findByPk(projectId);
+      if (!project) {
+        throw new NotFoundException('Project not found');
+      }
+      const user = await this.teamProjectModel.findByPk(
+        createTeamProjectDto.userId,
+      );
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
       const isMember = await this.teamProjectModel.findOne({
         where: {
-          projectId: createTeamProjectDto.projectId,
+          projectId: projectId,
           userId: createTeamProjectDto.userId,
         },
       });
@@ -176,15 +187,17 @@ export class ProjectService {
     }
   }
 
-  async removeMember(id: number): Promise<ResponseDto> {
+  async removeMember(projectId: number, userId: number): Promise<ResponseDto> {
     try {
-      const member = await this.teamProjectModel.findByPk(id);
+      const member = await this.teamProjectModel.findOne({
+        where: { projectId, userId },
+      });
       if (!member) {
         throw new NotFoundException('No team member found with the given ID.');
       }
       await member.destroy();
       return new ResponseDto({
-        message: `Team member with ID ${id} has been removed successfully.`,
+        message: `Team member with ID ${userId} has been removed successfully.`,
       });
     } catch (error) {
       throw new InternalServerErrorException(error.message);
