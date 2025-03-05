@@ -21,7 +21,7 @@ import {
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { ProjectAccessMiddleware } from '../../common/middleware/project-access.middleware';
 import { AuthRequest } from 'src/types/request.interface';
-import { TaskOwnerGuard } from 'src/common/guards/task-owner.guard';
+import { OwnerGuard } from 'src/common/guards/owner.guard';
 import { TaskListResponseDto } from './response/task-list-response.dto';
 import { UnauthorizedResponseDto } from '../../common/dto/unauthorized-response.dto';
 import { NotFoundResponseDto } from './response/not-found-response.dto';
@@ -85,8 +85,8 @@ export class TaskController {
     return this.taskService.findOne(id, projectId);
   }
 
-  @Post()
-  @UseGuards(ProjectAccessMiddleware)
+  @Post(':projectId')
+  @UseGuards(OwnerGuard)
   @ApiOperation({
     summary: 'Create a new task',
     description:
@@ -107,8 +107,11 @@ export class TaskController {
     description: 'Bad Request',
     type: ErrorResponseDto,
   })
-  create(@Body() createTaskDto: CreateTaskDto) {
-    return this.taskService.create(createTaskDto);
+  create(
+    @Param('projectId') projectId: number,
+    @Body() createTaskDto: CreateTaskDto,
+  ) {
+    return this.taskService.create(projectId, createTaskDto);
   }
 
   @Patch(':projectId/:id')
@@ -148,7 +151,7 @@ export class TaskController {
   }
 
   @Delete(':projectId/:id')
-  @UseGuards(TaskOwnerGuard)
+  @UseGuards(OwnerGuard)
   @ApiOperation({
     summary: 'Delete a task',
     description:
