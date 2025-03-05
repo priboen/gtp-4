@@ -1,7 +1,7 @@
 import {
   Inject,
   Injectable,
-  NotFoundException,
+  InternalServerErrorException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -9,6 +9,8 @@ import { User } from 'src/common/models';
 import { CreateUserDto } from '../user/dto/create-user.dto';
 import * as bcrypt from 'bcrypt';
 import { LoginDto } from './dto/login.dto';
+import { ResponseDto } from 'src/common/dto';
+import { Op } from 'sequelize';
 
 @Injectable()
 export class AuthService {
@@ -16,14 +18,41 @@ export class AuthService {
     @Inject('USER_REPOSITORY') private readonly userModel: typeof User,
     private jwtService: JwtService,
   ) {}
-  async register(createUserDto: CreateUserDto): Promise<User> {
-    const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
-    return this.userModel.create({
-      ...createUserDto,
-      password: hashedPassword,
-    });
+  private removePassword(user: any) {
+    const { password, ...userWithoutPassword } = user.toJSON();
+    return userWithoutPassword;
   }
-
+  async register(createUserDto: CreateUserDto): Promise<ResponseDto<User>> {
+    try {
+      const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
+      const existingUser = await this.userModel.findOne({
+        where: {
+          [Op.or]: [
+            { username: createUserDto.username },
+            { email: createUserDto.email },
+          ],
+        },
+      });
+      if (existingUser) {
+        return new ResponseDto<User>({
+          message: 'Username or Email already registered',
+        });
+      }
+      const user = await this.userModel.create({
+        ...createUserDto,
+        password: hashedPassword,
+      });
+      const userWithoutPassword = this.removePassword(user);
+      return new ResponseDto<User>({ data: userWithoutPassword });
+    } catch (error) {
+      if (error.name === 'SequelizeUniqueConstraintError') {
+        throw new InternalServerErrorException('Database constraint violation');
+      }
+      throw new InternalServerErrorException(
+        `Error creating user: ${error.message}`,
+      );
+    }
+  }
   async login(loginDto: LoginDto): Promise<{ access_token: string }> {
     try {
       const user = await this.userModel.findOne({
@@ -48,15 +77,5 @@ export class AuthService {
       console.error('Login Error:', error);
       throw new UnauthorizedException(error.message || 'Login failed');
     }
-  }
-
-  async getProfile(userId: number): Promise<User> {
-    const user = await this.userModel.findByPk(userId, {
-      attributes: { exclude: ['password'] },
-    });
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-    return user;
   }
 }
