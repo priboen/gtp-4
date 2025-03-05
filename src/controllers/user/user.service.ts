@@ -4,12 +4,9 @@ import {
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
-import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from 'src/common/models';
 import { ResponseDto } from 'src/common/dto';
-import * as bcrypt from 'bcrypt';
-import { Sequelize, Op } from 'sequelize';
 
 @Injectable()
 export class UserService {
@@ -17,45 +14,19 @@ export class UserService {
     @Inject('USER_REPOSITORY') private readonly userModel: typeof User,
   ) {}
 
-  private async hashPassword(password: string): Promise<string> {
-    return await bcrypt.hash(password, 10);
-  }
-
   private removePassword(user: any) {
     const { password, ...userWithoutPassword } = user.toJSON();
     return userWithoutPassword;
   }
 
-  async create(createUserDto: CreateUserDto): Promise<ResponseDto<User>> {
-    try {
-      const existingUser = await this.userModel.findOne({
-        where: {
-          [Op.or]: [
-            { username: createUserDto.username },
-            { email: createUserDto.email },
-          ],
-        },
-      });
-      if (existingUser) {
-        return new ResponseDto<User>({
-          message: 'Username or Email already registered',
-        });
-      }
-      const hashedPassword = await this.hashPassword(createUserDto.password);
-      const user = await this.userModel.create({
-        ...createUserDto,
-        password: hashedPassword,
-      });
-      const userWithoutPassword = this.removePassword(user);
-      return new ResponseDto<User>({ data: userWithoutPassword });
-    } catch (error) {
-      if (error.name === 'SequelizeUniqueConstraintError') {
-        throw new InternalServerErrorException('Database constraint violation');
-      }
-      throw new InternalServerErrorException(
-        `Error creating user: ${error.message}`,
-      );
+  async getProfile(userId: number): Promise<User> {
+    const user = await this.userModel.findByPk(userId, {
+      attributes: { exclude: ['password'] },
+    });
+    if (!user) {
+      throw new NotFoundException('User not found');
     }
+    return user;
   }
 
   async findAll(): Promise<ResponseDto<User[]>> {

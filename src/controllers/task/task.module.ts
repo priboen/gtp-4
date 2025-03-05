@@ -1,0 +1,19 @@
+import { Module } from '@nestjs/common';
+import { TaskService } from './task.service';
+import { TaskController } from './task.controller';
+import { JwtModule } from '@nestjs/jwt';
+import { taskProvider } from 'src/common/providers';
+import { ProjectModule } from '../project/project.module';
+
+@Module({
+  imports: [
+    ProjectModule,
+    JwtModule.register({
+      secret: process.env.JWT_SECRET,
+      signOptions: { expiresIn: '1h' },
+    }),
+  ],
+  controllers: [TaskController],
+  providers: [TaskService, taskProvider],
+})
+export class TaskModule {}

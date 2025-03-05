@@ -1,12 +1,16 @@
+import * as dotenv from 'dotenv';
+dotenv.config();
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { RequestMethod, ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { apiReference } from '@scalar/nestjs-api-reference';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.useGlobalPipes(new ValidationPipe());
+  app.useGlobalFilters(new AllExceptionsFilter());
   app.setGlobalPrefix('api', {
     exclude: [
       {
@@ -19,11 +23,11 @@ async function bootstrap() {
     .setTitle('GTP')
     .setDescription('GTP API Documentation')
     .setVersion('1.0')
-    .addTag('users')
+    .addBearerAuth()
     .build();
   const documentFactory = () => SwaggerModule.createDocument(app, config);
   app.use(
-    '/api/documentation',
+    '/docs',
     apiReference({
       spec: {
         content: documentFactory,

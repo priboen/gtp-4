@@ -1,4 +1,5 @@
-import { Table, Column, Model } from 'sequelize-typescript';
+import { Table, Column, Model, HasMany } from 'sequelize-typescript';
+import { TeamProject } from './team-project.model';
 
 @Table({
   tableName: 'users',
@@ -15,4 +16,7 @@ export class User extends Model {
 
   @Column
   password: string;
+
+  @HasMany(() => TeamProject, { onDelete: 'CASCADE' })
+  teamProjects: TeamProject[];
 }

@@ -1,12 +1,20 @@
 import { Sequelize } from 'sequelize-typescript';
 import { mysqlConfig } from '../config/mysql.config';
-import { User } from '../models';
+import { User, Task, Events, Project, EventAttendances } from '../models';
+import { TeamProject } from '../models/team-project.model';
 
 export const mysqlProvider = {
   provide: 'SEQUELIZE',
   useFactory: async () => {
     const sequelize = new Sequelize(mysqlConfig);
-    sequelize.addModels([User]);
+    sequelize.addModels([
+      User,
+      Task,
+      Events,
+      Project,
+      TeamProject,
+      EventAttendances,
+    ]);
     await sequelize.sync();
     return sequelize;
   },
