@@ -17,12 +17,4 @@ export class CreateTaskDto {
   @IsNotEmpty()
   @IsString()
   description: string;
-
-  // @ApiProperty({
-  //   example: 'Project ID',
-  //   description: 'ID of the project to which the task belongs',
-  // })
-  // @IsNotEmpty()
-  // @IsNumber()
-  // projectId: number;
 }
