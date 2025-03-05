@@ -1,3 +1,4 @@
+import { ProjectOwnerGuard } from './../../common/guards/project-owner.guard';
 import {
   Body,
   Controller,
@@ -25,7 +26,6 @@ import { ErrorResponseDto } from '../../common/dto/error-response.dto';
 import { UnauthorizedResponseDto } from '../../common/dto/unauthorized-response.dto';
 import { NotFoundResponseDto } from './response/not-found-response.dto';
 import { AuthRequest } from 'src/types/request.interface';
-import { ProjectOwnerMiddleware } from 'src/common/middleware/project-owner.middleware';
 
 @ApiTags('Projects')
 @ApiBearerAuth()
@@ -119,7 +119,7 @@ export class ProjectController {
   }
 
   @Patch(':id')
-  @UseGuards(ProjectOwnerMiddleware)
+  @UseGuards(ProjectOwnerGuard)
   @ApiOperation({
     summary: 'Update a project',
     description:
@@ -157,7 +157,7 @@ export class ProjectController {
   }
 
   @Delete(':id')
-  @UseGuards(ProjectOwnerMiddleware)
+  @UseGuards(ProjectOwnerGuard)
   @ApiOperation({
     summary: 'Delete a project',
     description: 'Delete a specific project owned by the authenticated user.',
