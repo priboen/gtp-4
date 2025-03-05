@@ -10,6 +10,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { TaskModule } from './controllers/task/task.module';
 import { EventsModule } from './controllers/events/events.module';
 import { TeamProjectModule } from './controllers/team-project/team-project.module';
+import { EventAttendancesModule } from './controllers/event-attendances/event-attendances.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { TeamProjectModule } from './controllers/team-project/team-project.modul
     TaskModule,
     EventsModule,
     TeamProjectModule,
+    EventAttendancesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
