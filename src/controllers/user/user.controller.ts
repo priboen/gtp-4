@@ -7,12 +7,17 @@ import {
   Param,
   Patch,
   Post,
+  Request,
   UseGuards,
 } from '@nestjs/common';
 import { UserService } from './user.service';
-import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 
 @ApiTags('User')
@@ -44,11 +49,26 @@ export class UserController {
     return this.userService.findOne(userId);
   }
 
-  @ApiOperation({ summary: 'Create a new user' })
+  @Get('profile')
   @UseGuards(JwtAuthGuard)
-  @Post()
-  create(@Body() createUserDto: CreateUserDto) {
-    return this.userService.create(createUserDto);
+  @ApiOperation({ summary: 'Get user profile' })
+  @ApiBearerAuth()
+  @ApiResponse({
+    status: 200,
+    description: 'User profile data',
+    schema: {
+      example: {
+        id: 1,
+        name: 'John Doe',
+        username: 'johndoe',
+        email: 'john@example.com',
+        createdAt: '2021-08-01T00:00:00.000Z',
+        updatedAt: '2021-08-01T00:00:00.000Z',
+      },
+    },
+  })
+  profile(@Request() req: { user: { userId: number } }) {
+    return this.userService.getProfile(req.user.userId);
   }
 
   @ApiOperation({ summary: 'Update a user by id' })
